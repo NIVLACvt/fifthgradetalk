@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Fifth Grade Bulletin Board</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #009980;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      height: 100vh;
+    }
+
+    h2 {
+      margin-top: 20px;
+      color: white;
+    }
+
+    #bulletin-board {
+      background-color: #DEB887;
+      width: 600px;
+      height: 300px;
+      margin-top: 20px;
+      padding: 15px;
+      border: 10px solid #8B4513;
+      overflow-y: scroll;
+      display: none;
+    }
+
+    .message {
+      background-color: white;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 10px;
+      box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+    }
+
+    #controls {
+      margin-top: 15px;
+      display: none;
+    }
+
+    #message-input {
+      width: 300px;
+    }
+
+    #emoji-picker, #recipient-select {
+      margin-left: 10px;
+    }
+
+    #game-section {
+      margin-top: 20px;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    iframe {
+      width: 600px;
+      height: 400px;
+      border: none;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h2>🧷 Fifth Grade Bulletin Board 🧷</h2>
+
+  <div id="login-box">
+    <p>Enter the password to access the Fifth Grade Room:</p>
+    <input type="password" id="password-input" placeholder="Enter password">
+    <button onclick="checkPassword()">Enter</button>
+  </div>
+
+  <div id="username-box" style="display: none;">
+    <p>Enter your username:</p>
+    <input type="text" id="username-input" placeholder="Enter username">
+    <button onclick="setUsername()">Enter</button>
+  </div>
+
+  <div id="bulletin-board"></div>
+
+  <div id="controls">
+    <input type="text" id="message-input" placeholder="Type a message..." onkeydown="handleKeyPress(event)">
+    <button id="send-button" onclick="sendMessage()">Post</button>
+    <select id="emoji-picker" onchange="addEmoji()">
+      <option value="">😀 😃 😄 😁 😆 😅 😂 🤣 🥲 🫠</option>
+      <option value="😀">😀</option>
+      <option value="😃">😃</option>
+      <option value="😄">😄</option>
+      <option value="😁">😁</option>
+      <option value="😆">😆</option>
+      <option value="😅">😅</option>
+      <option value="😂">😂</option>
+      <option value="🤣">🤣</option>
+      <option value="🥲">🥲</option>
+      <option value="🫠">🫠</option>
+    </select>
+    <button onclick="toggleGames()">🎮 Games</button>
+  </div>
+
+  <div id="game-section">
+    <label for="game-select">Choose a game:</label>
+    <select id="game-select" onchange="loadGame()">
+      <option value="">-- Select a Game --</option>
+      <option value="https://www.crazygames.com/"></option>
+    </select>
+    <iframe id="game-frame" src=""></iframe>
+  </div>
+
+  <script src="https://fifth-grade-talk.onrender.com/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const bulletinBoard = document.getElementById("bulletin-board");
+    const messageInput = document.getElementById("message-input");
+    const sendButton = document.getElementById("send-button");
+    const emojiPicker = document.getElementById("emoji-picker");
+    const gameSection = document.getElementById("game-section");
+    const gameFrame = document.getElementById("game-frame");
+    let username = "";
+
+    function checkPassword() {
+      const password = document.getElementById("password-input").value;
+      if (password === "htfif") {
+        document.getElementById("login-box").style.display = "none";
+        document.getElementById("username-box").style.display = "block";
+      } else {
+        alert("Incorrect password!");
+      }
+    }
+
+    function setUsername() {
+      username = document.getElementById("username-input").value.trim();
+      if (username) {
+        document.getElementById("username-box").style.display = "none";
+        bulletinBoard.style.display = "block";
+        document.getElementById("controls").style.display = "flex";
+        socket.emit("new user", username);
+      } else {
+        alert("Please enter a valid username.");
+      }
+    }
+
+    function sendMessage() {
+      const message = messageInput.value.trim();
+      if (message) {
+        const messageId = Date.now();
+        socket.emit("chat message", { sender: username, message, id: messageId });
+        messageInput.value = "";
+      }
+    }
+
+    function handleKeyPress(event) {
+      if (event.key === "Enter") {
+        sendMessage();
+      }
+    }
+
+    function addEmoji() {
+      messageInput.value += emojiPicker.value;
+      emojiPicker.value = "";
+    }
+
+    function createMessageElement(data) {
+      const msgElement = document.createElement("div");
+      msgElement.classList.add("message");
+      msgElement.innerHTML = `
+        <p><strong>${data.sender}:</strong> ${data.message}</p>
+        <button onclick="sendReaction('${data.id}', '👍')">👍</button>
+        <button onclick="sendReaction('${data.id}', '❤️')">❤️</button>
+        <button onclick="sendReaction('${data.id}', '😂')">😂</button>
+        <span id="reactions-${data.id}"></span>
+      `;
+      return msgElement;
+    }
+
+    function toggleGames() {
+      gameSection.style.display = gameSection.style.display === "flex" ? "none" : "flex";
+    }
+
+    function loadGame() {
+      const gameURL = document.getElementById("game-select").value;
+      gameFrame.src = gameURL || "";
+    }
+
+    socket.on("chat message", (data) => {
+      const msgElement = createMessageElement(data);
+      bulletinBoard.appendChild(msgElement);
+      bulletinBoard.scrollTop = bulletinBoard.scrollHeight;
+    });
+
+    socket.on("all messages", (messages) => {
+      bulletinBoard.innerHTML = "";
+      messages.forEach(data => {
+        const msgElement = createMessageElement(data);
+        bulletinBoard.appendChild(msgElement);
+      });
+      bulletinBoard.scrollTop = bulletinBoard.scrollHeight;
+    });
+
+    function sendReaction(messageId, emoji) {
+      socket.emit("reaction", { messageId, emoji });
+    }
+
+    socket.on("reaction", (data) => {
+      const reactionElement = document.getElementById(`reactions-${data.messageId}`);
+      if (reactionElement) {
+        reactionElement.textContent += ` ${data.emoji}`;
+      }
+    });
+  </script>
+</body>
+</html>
