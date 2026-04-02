@@ -4,6 +4,7 @@
   "description": "A real-time chat application",
   "main": "server.js",
   "scripts": {
+    "biuld": "npm install"
     "start": "node server.js"
   },
   "dependencies": {
