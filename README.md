@@ -1,1 +1,1 @@
-go to: https://github.com/NIVLACvt/fifthgradetalk.git
+go to: https://nivlacvt.github.io/fifthgradetalk/
